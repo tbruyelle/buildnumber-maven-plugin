@@ -617,6 +617,35 @@ public class CreateMojo
         throws MojoExecutionException
     {
         String scmUrl;
+
+        if ( this.useGitSvn )
+        {
+            Commandline cl = new Commandline();
+            cl.setExecutable( "git" );
+            cl.createArg().setValue( "svn" );
+            cl.createArg().setValue( "info" );
+            try
+            {
+                InputStream inputStream = cl.execute().getInputStream();
+                String output = IOUtil.toString( inputStream );
+                getLog().debug( "gitsvn output : " + output );
+
+                Pattern pattern = Pattern.compile( "URL: (\\S+)", Pattern.MULTILINE );
+                Matcher matcher = pattern.matcher( output );
+                if ( matcher.find() )
+                {
+                    String url = matcher.group( 1 );
+                    getLog().info( "git svn found url " + url );
+                    return filterBranchFromScmUrl( url );
+                }
+                throw new MojoExecutionException( "Unable to find url in git svn info output :\n" + output );
+            }
+            catch ( Exception e )
+            {
+                throw new MojoExecutionException( "Exception during git svn command : " + e.getLocalizedMessage(), e );
+            }
+        }
+
         try
         {
             ScmRepository repository = getScmRepository();
